@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cyber Neon Runner - Pro HTML Game</title>
+    <style>
+        /* --- CSS Reset & Base --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #050510;
+            color: white;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden; /* កុំឱ្យអូសចុះឡើង */
+            user-select: none; /* កុំឱ្យអ្នកលេង select text */
+            touch-action: none; /* ការពារ browser standard gestures */
+        }
+
+        /* --- កន្លែងបង្ហាញហ្គេម (Game Container) --- */
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 900px;
+            max-height: 500px;
+            background-color: #0a0a1a;
+            border: 3px solid #00f0ff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.3);
+        }
+
+        /* --- សៃលដី (Neon Floor) --- */
+        #floor {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 40px;
+            background: linear-gradient(180deg, #3926ff 0%, #050510 100%);
+            border-top: 3px solid #00f0ff;
+            box-shadow: 0 0 15px #00f0ff;
+            z-index: 5;
+        }
+
+        /* --- តួអង្គ (Player Runner) --- */
+        #player {
+            position: absolute;
+            bottom: 40px; /* នៅលើដី */
+            left: 50px;
+            width: 35px;
+            height: 45px;
+            background-color: #00f0ff;
+            border-radius: 4px;
+            box-shadow: 0 0 15px #00f0ff;
+            z-index: 10;
+            /* ចលនារត់ (Run animation) */
+            animation: run-wiggle 0.3s infinite alternate ease-in-out;
+        }
+
+        /* Jump Style */
+        #player.jumping {
+            animation: none; /* បិទចលនារត់ពេលលោត */
+            border-radius: 50%; /* ប្តូរជាទម្រង់មូលពេលលោត */
+            transform: scale(1.1);
+            transition: border-radius 0.1s;
+        }
+
+        /* ចលនាក្រវីតួអង្គពេលរត់ (Pro Touch) */
+        @keyframes run-wiggle {
+            0% { transform: skewX(-5deg); }
+            100% { transform: skewX(5deg); }
+        }
+
+        /* --- ឧបសគ្គ (Obstacle - Spike) --- */
+        .obstacle {
+            position: absolute;
+            bottom: 40px; /* នៅលើដី */
+            width: 25px;
+            height: 35px;
+            background-color: #ff0055;
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%); /* រាងត្រីកោណមុត */
+            box-shadow: 0 0 20px #ff0055;
+            z-index: 5;
+        }
+
+        /* --- ផ្ទៃខាងក្រោយ (Background Particles) --- */
+        .particle {
+            position: absolute;
+            background-color: rgba(0, 240, 255, 0.1);
+            border-radius: 50%;
+            z-index: 1;
+        }
+
+        /* --- ចំណុចប្រទាក់អ្នកប្រើ (UI Layer) --- */
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 20;
+            pointer-events: none; /* មិនឱ្យប៉ះ UI */
+        }
+
+        #score-board {
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 10px #00f0ff;
+        }
+
+        /* --- ផ្ទាំងសាយ Game Over --- */
+        #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease-out;
+        }
+
+        #game-over-screen.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #game-over-screen h1 {
+            font-size: 48px;
+            color: #ff0055;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px #ff0055;
+        }
+
+        #game-over-screen p {
+            font-size: 20px;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .btn-restart {
+            padding: 12px 30px;
+            font-size: 18px;
+            background-color: transparent;
+            color: #00f0ff;
+            border: 2px solid #00f0ff;
+            border-radius: 8px;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-weight: bold;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px #00f0ff;
+        }
+
+        .btn-restart:hover {
+            background-color: #00f0ff;
+            color: #050510;
+            box-shadow: 0 0 20px #00f0ff;
+        }
+
+        /* --- សារណែនាំពេលចាប់ផ្តើម (Tap to Start) --- */
+        #start-instruction {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 16px;
+            color: #ccc;
+            z-index: 15;
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="particles-container"></div>
+        <div id="floor"></div>
+
+        <div id="ui-layer">
+            <div id="score-board">ពិន្ទុ: <span id="score">0</span></div>
+        </div>
+
+        <p id="start-instruction">ចុច ឬ Tap ដើម្បីលោត</p>
+
+        <div id="player"></div>
+
+        <div id="game-over-screen">
+            <h1>Game Over</h1>
+            <p>ពិន្ទុចុងក្រោយ: <span id="final-score">0</span></p>
+            <button class="btn-restart" onclick="restartGame()">លេងម្តងទៀត</button>
+        </div>
+    </div>
+
+    <script>
+        // --- ឯកសារយោង HTML Elements ---
+        const gameContainer = document.getElementById('game-container');
+        const player = document.getElementById('player');
+        const scoreElement = document.getElementById('score');
+        const finalScoreElement = document.getElementById('final-score');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const instruction = document.getElementById('start-instruction');
+
+        // --- ការកំណត់ហ្គេម (Game Settings) ---
+        const PLAYER_BOTTOM = 40; // កម្ពស់ដី
+        const PLAYER_DEFAULT_Y = 0; // ទាក់ទងនឹង bottom
+        const JUMP_HEIGHT = 110;
+        const GRAVITY = 0.6; // កម្លាំងទំនាញ (ល្បឿនធ្លាក់ចុះ)
+        const OBSTACLE_SPEED = 7; // ល្បឿនឧបសគ្គរត់
+        const OBSTACLE_SPAWN_INTERVAL = 1400; // រយៈពេលបង្កើតឧបសគ្គថ្មី (ms)
+        const PARTICLE_SPEED = 1;
+
+        // --- ស្ថានភាពហ្គេម (Game State) ---
+        let gameActive = false;
+        let score = 0;
+        let playerY = 0;
+        let playerVelocityY = 0;
+        let obstacles = [];
+        let particles = [];
+        let spawnTimeout;
+        let gameLoopId;
+
+        // --- ១. មុខងារបញ្ជា (Controls) ---
+        
+        // មុខងារលោត
+        function playerJump() {
+            // ចាប់ផ្តើមហ្គេមពេលចុចលើកដំបូង
+            if (!gameActive && gameOverScreen.className !== 'active') {
+                startGame();
+                // កុំឱ្យលោតភ្លាម
+            }
+
+            // អាចលោតបានលុះត្រាតែហ្គេមដើរ និងតួអង្គនៅជាប់ដី
+            if (gameActive && playerY === PLAYER_DEFAULT_Y) {
+                playerVelocityY = 15; // កម្លាំងលោតឡើង
+                player.classList.add('jumping'); // បន្ថែម style ពេលលោត
+            }
+        }
+
+        // ការបញ្ជាតាម Mouse Click (សម្រាប់កុំព្យូទ័រ)
+        gameContainer.addEventListener('mousedown', (e) => {
+            // កុំឱ្យចាប់ click លើប៊ូតុង Restart
+            if (e.target.tagName !== 'BUTTON') {
+                playerJump();
+            }
+        });
+
+        // ការបញ្ជាតាម Touch (សម្រាប់ទូរស័ព្ទ)
+        gameContainer.addEventListener('touchstart', (e) => {
+            if (e.target.tagName !== 'BUTTON') {
+                e.preventDefault(); // ការពារ default tap behavior
+                playerJump();
+            }
+        });
+
+        // --- ២. មុខងារស្នូលហ្គេម (Game Logic) ---
+
+        // Loop ចម្បង (Game Loop)
+        function gameLoop() {
+            if (!gameActive) return;
+
+            // អាប់ដេតតួអង្គ
+            updatePlayer();
+
+            // អាប់ដេតឧបសគ្គ
+            updateObstacles();
+
+            // អាប់ដេតពិន្ទុ
+            updateScore();
+
+            // អាប់ដេតផ្ទៃខាងក្រោយ
+            updateParticles();
+
+            // ហៅ Loop បន្តទៀត (ប្រហែល 60 fps)
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+        function updatePlayer() {
+            // អនុវត្តកម្លាំងទំនាញ
+            playerVelocityY -= GRAVITY;
+            playerY += playerVelocityY;
+
+            // កុំឱ្យធ្លាក់ធ្លាយដី
+            if (playerY <= PLAYER_DEFAULT_Y) {
+                playerY = PLAYER_DEFAULT_Y;
+                playerVelocityY = 0;
+                player.classList.remove('jumping'); // បិទ style ពេលលោត
+            }
+
+            // អាប់ដេតទីតាំងតួអង្គលើអេក្រង់
+            player.style.bottom = (PLAYER_BOTTOM + playerY) + 'px';
+        }
+
+        function spawnObstacle() {
+            if (!gameActive) return;
+
+            const obstacle = document.createElement('div');
+            obstacle.classList.add('obstacle');
+            obstacle.style.left = gameContainer.offsetWidth + 'px'; // ចាប់ផ្តើមពីក្រៅអេក្រង់ខាងស្តាំ
+            
+            // កម្ពស់ឧបសគ្គចៃដន្យ (Pro touch)
+            const randomHeight = Math.random() * (45 - 25) + 25; 
+            obstacle.style.height = randomHeight + 'px';
+            obstacle.style.width = randomHeight / 1.5 + 'px';
+
+            gameContainer.appendChild(obstacle);
+            obstacles.push(obstacle);
+
+            // កំណត់ពេលបង្កើតឧបសគ្គបន្ទាប់
+            // ល្បឿនបង្កើតនឹងលឿនទៅៗតាមពិន្ទុ (Pro difficulty)
+            const nextInterval = Math.max(800, OBSTACLE_SPAWN_INTERVAL - (score * 5));
+            spawnTimeout = setTimeout(spawnObstacle, nextInterval);
+        }
+
+        function updateObstacles() {
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                let currentLeft = parseFloat(obs.style.left);
+                
+                // រំកិលឧបសគ្គទៅខាងឆ្វេង (លឿនទៅៗតាមពិន្ទុ)
+                const currentSpeed = OBSTACLE_SPEED + (score / 30);
+                currentLeft -= currentSpeed;
+                obs.style.left = currentLeft + 'px';
+
+                // ចាប់ការប៉ះទង្គិច (Collision Detection) - សំខាន់បំផុត!
+                if (checkCollision(player, obs)) {
+                    gameOver();
+                    return;
+                }
+
+                // លុបឧបសគ្គដែលរត់ហួសអេក្រង់ខាងឆ្វេង
+                if (currentLeft < -50) {
+                    obs.remove();
+                    obstacles.splice(i, 1);
+                }
+            }
+        }
+
+        // មុខងារគណនាការប៉ះទង្គិច (Collision detection for professional accuracy)
+        function checkCollision(playerEl, obstacleEl) {
+            const p = playerEl.getBoundingClientRect();
+            const o = obstacleEl.getBoundingClientRect();
+
+            // កាត់បន្ថយផ្ទៃប៉ះទង្គិចបន្តិច (Padding) ដើម្បីកុំឱ្យពិបាកពេក (Player friendly)
+            const paddingP = 3;
+            const paddingOLeft = 5;
+            const paddingOTop = 10;
+
+            // គណនាមើលតើផ្ទៃទាំងពីរជាន់គ្នាឬអត់
+            return (
+                p.right - paddingP > o.left + paddingOLeft &&
+                p.left + paddingP < o.right - paddingOLeft &&
+                p.bottom - paddingP > o.top + paddingOTop &&
+                p.top + paddingP < o.bottom - paddingP
+            );
+        }
+
+        function updateScore() {
+            score++;
+            // រាល់ ១០០ ពិន្ទុ បង្ហាញលេខស្អាត
+            scoreElement.innerText = Math.floor(score / 10);
+        }
+
+        // --- ៣. ការគ្រប់គ្រងផ្ទៃខាងក្រោយ (Pro Visuals) ---
+        function createParticles() {
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('particle');
+                resetParticle(particle, true);
+                document.getElementById('particles-container').appendChild(particle);
+                particles.push(particle);
+            }
+        }
+
+        function resetParticle(particle, randomX = false) {
+            const size = Math.random() * (4 - 1) + 1;
+            particle.style.width = size + 'px';
+            particle.style.height = size + 'px';
+            particle.style.left = (randomX ? Math.random() * gameContainer.offsetWidth : gameContainer.offsetWidth) + 'px';
+            particle.style.top = Math.random() * (gameContainer.offsetHeight - 50) + 'px';
+            particle.speed = Math.random() * (3 - 0.5) + 0.5;
+        }
+
+        function updateParticles() {
+            particles.forEach(p => {
+                let currentLeft = parseFloat(p.style.left);
+                currentLeft -= p.speed;
+                p.style.left = currentLeft + 'px';
+
+                if (currentLeft < -10) {
+                    resetParticle(p);
+                }
+            });
+        }
+
+        // --- ៤. ការគ្រប់គ្រងលំហូរហ្គេម (Game Flow) ---
+
+        function startGame() {
+            if (gameActive) return;
+
+            gameActive = true;
+            score = 0;
+            playerY = 0;
+            playerVelocityY = 0;
+            instruction.style.display = 'none';
+
+            // ចាប់ផ្តើម Loop
+            gameLoop();
+            
+            // ចាប់ផ្តើមបង្កើតឧបសគ្គ
+            spawnObstacle();
+        }
+
+        function gameOver() {
+            gameActive = false;
+            
+            // ឈប់ Loop និងការបង្កើតឧបសគ្គ
+            cancelAnimationFrame(gameLoopId);
+            clearTimeout(spawnTimeout);
+
+            // បង្ហាញផ្ទាំង Game Over
+            finalScoreElement.innerText = Math.floor(score / 10);
+            gameOverScreen.classList.add('active');
+        }
+
+        function restartGame() {
+            // លុបឧបសគ្គទាំងអស់នៅលើអេក្រង់
+            obstacles.forEach(obs => obs.remove());
+            obstacles = [];
+
+            // លាក់ផ្ទាំង Game Over
+            gameOverScreen.classList.remove('active');
+            instruction.style.display = 'block';
+            scoreElement.innerText = '0';
+        }
+
+        // --- ៥. 初始化 (Initialization) ---
+        // បង្កើតផ្ទៃខាងក្រោយពេលបើកដំបូង
+        createParticles();
+        // ដំណើរការចលនាផ្ទៃខាងក្រោយពេលហ្គេមមិនទាន់ចាប់ផ្តើម (Pro look)
+        setInterval(updateParticles, 20);
+
+    </script>
+</body>
+</html>
