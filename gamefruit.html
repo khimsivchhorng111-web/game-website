@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Khmer Kid Arcade Portal</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;700&display=swap');
+        body { font-family: 'Kantumruy Pro', sans-serif; background: linear-gradient(135deg, #fef08a 0%, #fbcfe8 100%); min-height: 100vh; }
+        .hidden-game { display: none !important; }
+    </style>
+</head>
+<body class="p-4 flex flex-col items-center">
+
+    <header class="text-center my-4 w-full max-w-4xl">
+        <h1 class="text-4xl font-bold text-pink-600 drop-shadow-md mb-4 animate-bounce">🎈 ពិភពហ្គេមកុមារដ៏រីករាយ 🌟</h1>
+        
+        <div class="flex flex-wrap justify-center gap-3 bg-white/80 p-3 rounded-2xl shadow-lg border border-pink-200">
+            <button onclick="switchGame('balloon')" id="btn-balloon" class="bg-pink-500 hover:bg-pink-600 text-white font-bold px-6 py-2.5 rounded-xl transition-all shadow-md transform scale-105">
+                🎈 ចាក់ប៉េងប៉ោង
+            </button>
+            <button onclick="switchGame('fruit')" id="btn-fruit" class="bg-amber-400 hover:bg-amber-500 text-white font-bold px-6 py-2.5 rounded-xl transition-all shadow-md">
+                🍎 ត្រកងផ្លែឈើ
+            </button>
+            <button onclick="switchGame('memory')" id="btn-memory" class="bg-purple-500 hover:bg-purple-600 text-white font-bold px-6 py-2.5 rounded-xl transition-all shadow-md">
+                🐱 បើករូបផ្គូផ្គង
+            </button>
+        </div>
+    </header>
+
+    <main class="w-full max-w-3xl bg-slate-900 border-4 border-white rounded-3xl shadow-2xl relative overflow-hidden aspect-video min-h-[450px]">
+        
+        <div id="game-balloon" class="w-full h-full relative bg-gradient-to-b from-sky-300 to-sky-100 overflow-hidden select-none cursor-crosshair">
+            <div class="absolute top-4 left-4 bg-white/80 backdrop-blur text-slate-800 px-4 py-1.5 rounded-full font-bold text-lg shadow-sm z-10">
+                ពិន្ទុ៖ <span id="balloon-score">0</span>
+            </div>
+            <div id="balloon-area" class="w-full h-full relative"></div>
+        </div>
+
+        <div id="game-fruit" class="w-full h-full relative bg-gradient-to-b from-teal-400 to-emerald-200 overflow-hidden hidden-game select-none">
+            <div class="absolute top-4 left-4 flex gap-4 z-10">
+                <div class="bg-white/80 backdrop-blur text-slate-800 px-4 py-1.5 rounded-full font-bold text-lg shadow-sm">
+                    ពិន្ទុ៖ <span id="fruit-score">0</span>
+                </div>
+                <div class="bg-white/80 backdrop-blur text-red-600 px-4 py-1.5 rounded-full font-bold text-lg shadow-sm">
+                    ជីវិត៖ <span id="fruit-lives">3</span>
+                </div>
+            </div>
+            <canvas id="fruitCanvas" class="w-full h-full block"></canvas>
+            <div class="absolute bottom-4 left-0 right-0 flex justify-between px-8 md:hidden z-20">
+                <button ontouchstart="moveFruitBasket(-40)" ontouchend="moveFruitBasket(0)" class="bg-white/40 active:bg-white/80 text-white p-4 rounded-full text-2xl w-16 h-16 shadow-lg">⬅️</button>
+                <button ontouchstart="moveFruitBasket(40)" ontouchend="moveFruitBasket(0)" class="bg-white/40 active:bg-white/80 text-white p-4 rounded-full text-2xl w-16 h-16 shadow-lg">➡️</button>
+            </div>
+        </div>
+
+        <div id="game-memory" class="w-full h-full bg-gradient-to-b from-indigo-900 to-purple-800 p-6 flex flex-col items-center justify-center hidden-game select-none">
+            <div class="text-white font-bold text-xl mb-4">គូដែលរកឃើញ៖ <span id="memory-matches">0</span> / 6
+            </div>
+            <div id="memory-grid" class="grid grid-cols-4 gap-3 max-w-md w-full"></div>
+            <button onclick="initMemoryGame()" class="mt-4 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-sm transition-all shadow-md">
+                🔄 លេងឡើងវិញ
+            </button>
+        </div>
+
+    </main>
+
+    <footer class="mt-6 text-slate-600 text-sm font-medium">
+        &copy; 2026 Khmer Kid Games Portal. រចនាឡើងយ៉ាងឡូយសម្រាប់កុមារ។
+    </footer>
+
+    <script>
+        let currentActiveGame = 'balloon';
+
+        // មុខងារដូរហ្គេមលេង
+        function switchGame(gameName) {
+            currentActiveGame = gameName;
+            
+            // លាក់រាល់ហ្គេមទាំងអស់សិន
+            document.getElementById('game-balloon').classList.add('hidden-game');
+            document.getElementById('game-fruit').classList.add('hidden-game');
+            document.getElementById('game-memory').classList.add('hidden-game');
+            
+            // ដក Style ប៊ូតុងទាំងអស់
+            document.getElementById('btn-balloon').className = "bg-pink-500 hover:bg-pink-600 text-white font-bold px-6 py-2.5 rounded-xl transition-all shadow-md";
+            document.getElementById('btn-fruit').className = "bg-amber-400 hover:bg-amber-500 text-white font-bold px-6 py-2.5 rounded-xl transition-all shadow-md";
+            document.getElementById('btn-memory').className = "bg-purple-500 hover:bg-purple-600 text-white font-bold px-6 py-2.5 rounded-xl transition-all shadow-md";
+
+            // បង្ហាញហ្គេមដែលបានជ្រើសរើស និងបន្ថែម Style ប៊ូតុងសកម្ម
+            if(gameName === 'balloon') {
+                document.getElementById('game-balloon').classList.remove('hidden-game');
+                document.getElementById('btn-balloon').classList.add('scale-105', 'ring-4', 'ring-pink-300');
+                initBalloonGame();
+            } else if(gameName === 'fruit') {
+                document.getElementById('game-fruit').classList.remove('hidden-game');
+                document.getElementById('btn-fruit').classList.add('scale-105', 'ring-4', 'ring-amber-200');
+                initFruitGame();
+            } else if(gameName === 'memory') {
+                document.getElementById('game-memory').classList.remove('hidden-game');
+                document.getElementById('btn-memory').classList.add('scale-105', 'ring-4', 'ring-purple-300');
+                initMemoryGame();
+            }
+        }
+
+        // ==================== ENGINE 1: BALLOON POPPER ====================
+        let balloonScore = 0;
+        let balloonInterval;
+        const colors = ['#ff4757', '#2ed573', '#1e90ff', '#ffa502', '#eccc68', '#9b59b6'];
+
+        function initBalloonGame() {
+            clearInterval(balloonInterval);
+            document.getElementById('balloon-area').innerHTML = '';
+            balloonScore = 0;
+            document.getElementById('balloon-score').innerText = balloonScore;
+            balloonInterval = setInterval(createBalloon, 800);
+        }
+
+        function createBalloon() {
+            if(currentActiveGame !== 'balloon') return;
+            const area = document.getElementById('balloon-area');
+            const balloon = document.createElement('div');
+            
+            const size = Math.random() * (70 - 50) + 50;
+            const randomX = Math.random() * (area.offsetWidth - size);
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            
+            balloon.style.position = 'absolute';
+            balloon.style.bottom = '-100px';
+            balloon.style.left = randomX + 'px';
+            balloon.style.width = size + 'px';
+            balloon.style.height = (size * 1.2) + 'px';
+            balloon.style.backgroundColor = color;balloon.style.borderRadius = '50% 50% 50% 50% / 40% 40% 60% 60%';
+            balloon.style.boxShadow = 'inset -8px -8px 0px rgba(0,0,0,0.15), 0 10px 15px rgba(0,0,0,0.1)';
+            
+            // កន្ទុយប៉េងប៉ោង
+            const string = document.createElement('div');
+            string.style.width = '2px';
+            string.style.height = '40px';
+            string.style.backgroundColor = '#888';
+            string.style.position = 'absolute';
+            string.style.bottom = '-40px';
+            string.style.left = '50%';
+            balloon.appendChild(string);
+
+            // ព្រឹត្តិការណ៍ចាក់បែក (Pop)
+            const popAction = () => {
+                balloonScore++;
+                document.getElementById('balloon-score').innerText = balloonScore;
+                
+                // លេងចលនាបែកតូចមួយ
+                balloon.style.transform = 'scale(1.4)';
+                balloon.style.opacity = '0';
+                balloon.style.transition = 'all 0.1s ease-out';
+                setTimeout(() => balloon.remove(), 100);
+            };
+            balloon.addEventListener('mousedown', popAction);
+            balloon.addEventListener('touchstart', (e) => { e.preventDefault(); popAction(); });
+
+            area.appendChild(balloon);
+
+            // ចលនាហោះឡើងលើ
+            let currentY = -100;
+            const speed = Math.random() * (3 - 1.5) + 1.5;
+            
+            function fly() {
+                if(currentActiveGame !== 'balloon') { balloon.remove(); return; }
+                currentY += speed;
+                balloon.style.bottom = currentY + 'px';
+                
+                if(currentY > area.offsetHeight + 100) {
+                    balloon.remove();
+                } else {
+                    requestAnimationFrame(fly);
+                }
+            }
+            fly();
+        }
+
+
+        // ==================== ENGINE 2: FRUIT CATCHER ====================
+        const fCanvas = document.getElementById('fruitCanvas');
+        const fCtx = fCanvas.getContext('2d');
+        let fruitScore = 0;
+        let fruitLives = 3;
+        let basket = { x: 0, y: 0, w: 90, h: 25, speed: 0 };
+        let catchables = [];
+        let fruitGameActive = false;
+        let fruitItems = ['🍎', '🍌', '🍉', '🍊', '🍇'];
+
+        function initFruitGame() {
+            // កំណត់ទំហំ Canvas ឱ្យត្រូវនឹងផ្ទៃម៉ាស៊ីន
+            fCanvas.width = fCanvas.parentElement.offsetWidth;
+            fCanvas.height = fCanvas.parentElement.offsetHeight;
+            
+            fruitScore = 0;
+            fruitLives = 3;
+            fruitGameActive = true;
+            catchables = [];
+            
+            document.getElementById('fruit-score').innerText = fruitScore;
+            document.getElementById('fruit-lives').innerText = fruitLives;
+
+            basket.x = fCanvas.width / 2 - basket.w / 2;
+            basket.y = fCanvas.height - 45;
+
+            // ចាប់ហ្វ្រាំងបញ្ជាតាម Keyboard សម្រាប់កុំព្យូទ័រ
+            window.onkeydown = (e) => {
+                if(e.code === 'ArrowLeft') basket.speed = -8;
+                if(e.code === 'ArrowRight') basket.speed = 8;
+            };
+            window.onkeyup = (e) => {
+                if(e.code === 'ArrowLeft' || e.code === 'ArrowRight') basket.speed = 0;
+            };
+
+            // តាមដានចលនា Mouse លើ Canvas ឱ្យងាយស្រួលបញ្ជា
+            fCanvas.onmousemove = (e) => {
+                const rect = fCanvas.getBoundingClientRect();
+                basket.x = e.clientX - rect.left - basket.w / 2;
+            };
+
+            updateFruitGame();
+        }
+
+        function moveFruitBasket(speed) {
+            basket.speed = speed;
+        }
+
+        function updateFruitGame() {
+            if(currentActiveGame !== 'fruit' || !fruitGameActive) return;
+
+            fCtx.clearRect(0, 0, fCanvas.width, fCanvas.height);
+
+            // រំកិលធុងត្រកង
+            basket.x += basket.speed;
+            if(basket.x < 0) basket.x = 0;
+            if(basket.x > fCanvas.width - basket.w) basket.x = fCanvas.width - basket.w;// គូសធុងត្រកង (Basket)
+            fCtx.fillStyle = '#0284c7';
+            fCtx.beginPath();
+            fCtx.roundRect(basket.x, basket.y, basket.w, basket.h, 10);
+            fCtx.fill();
+            fCtx.fillStyle = '#fff';
+            fCtx.font = '14px sans-serif';
+            fCtx.fillText('📥 ធុងខ្មែរ', basket.x + 15, basket.y + 18);
+
+            // បង្កើតផ្លែឈើ ឬគ្រាប់បែកចៃដន្យ
+            if(Math.random() < 0.02) {
+                let isBomb = Math.random() < 0.25; // 25% ជាគ្រាប់បែក
+                catchables.push({
+                    x: Math.random() * (fCanvas.width - 30),
+                    y: -30,
+                    type: isBomb ? '💣' : fruitItems[Math.floor(Math.random() * fruitItems.length)],
+                    isBomb: isBomb,
+                    speed: Math.random() * (4 - 2) + 2 + (fruitScore/50)
+                });
+            }
+
+            // គ្រប់គ្រងវត្ថុដែលធ្លាក់មក
+            for(let i = catchables.length - 1; i >= 0; i--) {
+                let item = catchables[i];
+                item.y += item.speed;
+
+                // គូសផ្លែឈើ/គ្រាប់បែក (Emoji)
+                fCtx.font = '30px sans-serif';
+                fCtx.fillText(item.type, item.x, item.y);
+
+                // បុកជាមួយធុងត្រកង
+                if(item.y + 15 >= basket.y && item.y <= basket.y + basket.h && item.x + 30 >= basket.x && item.x <= basket.x + basket.w) {
+                    if(item.isBomb) {
+                        fruitLives--;
+                        document.getElementById('fruit-lives').innerText = fruitLives;
+                        if(fruitLives <= 0) fruitGameActive = false;
+                    } else {
+                        fruitScore += 10;
+                        document.getElementById('fruit-score').innerText = fruitScore;
+                    }
+                    catchables.splice(i, 1);
+                    continue;
+                }
+
+                // ធ្លាក់ហួសដី
+                if(item.y > fCanvas.height) {
+                    if(!item.isBomb) {
+                        // បើធ្លាក់ផ្លែឈើចោល អត់យក អស់ជីវិត ១
+                        fruitLives--;
+                        document.getElementById('fruit-lives').innerText = fruitLives;
+                        if(fruitLives <= 0) fruitGameActive = false;
+                    }
+                    catchables.splice(i, 1);
+                }
+            }
+
+            // ប្រសិនបើ Game Over
+            if(!fruitGameActive) {
+                fCtx.fillStyle = 'rgba(0,0,0,0.75)';
+                fCtx.fillRect(0, 0, fCanvas.width, fCanvas.height);
+                fCtx.fillStyle = '#fff';
+                fCtx.font = 'bold 30px sans-serif';
+                fCtx.fillText('GAME OVER 😢', fCanvas.width/2 - 100, fCanvas.height/2 - 10);
+                fCtx.font = '18px sans-serif';
+                fCtx.fillText('ចុចលើប៊ូតុងខាងលើ ដើម្បីលេងម្តងទៀត', fCanvas.width/2 - 140, fCanvas.height/2 + 25);
+                return;
+            }
+
+            requestAnimationFrame(updateFruitGame);
+        }
+
+
+        // ==================== ENGINE 3: MEMORY MATCH ====================
+        const emojis = ['🐱', '🐶', '🦊', '🦁', '🐸', '🦄', '🐱', '🐶', '🦊', '🦁', '🐸', '🦄'];
+        let flippedCards = [];
+        let matchedCount = 0;
+        let canFlip = true;
+
+        function initMemoryGame() {
+            const grid = document.getElementById('memory-grid');
+            grid.innerHTML = '';
+            flippedCards = [];
+            matchedCount = 0;
+            canFlip = true;
+            document.getElementById('memory-matches').innerText = matchedCount;
+
+            // លាយឡំរូបភាពដោយចៃដន្យ (Shuffle)
+            const shuffled = emojis.sort(() => Math.random() - 0.5);
+
+            shuffled.forEach((emoji, index) => {
+                const card = document.createElement('div');card.dataset.emoji = emoji;
+                card.dataset.index = index;
+                card.className = "aspect-square bg-indigo-500 rounded-2xl flex items-center justify-center text-4xl cursor-pointer border-4 border-indigo-400 shadow-md transform transition-all active:scale-95 text-transparent";
+                card.innerText = '❓';
+
+                const cardFlipAction = () => {
+                    if(!canFlip  flippedCards.includes(card)  card.classList.contains('bg-emerald-500')) return;
+
+                    // បើកកាត
+                    card.classList.remove('text-transparent', 'bg-indigo-500');
+                    card.classList.add('bg-white', 'text-slate-900');
+                    card.innerText = emoji;
+                    flippedCards.push(card);
+
+                    if(flippedCards.length === 2) {
+                        canFlip = false;
+                        checkMemoryMatch();
+                    }
+                };
+
+                card.addEventListener('click', cardFlipAction);
+                grid.appendChild(card);
+            });
+        }
+
+        function checkMemoryMatch() {
+            const [card1, card2] = flippedCards;
+
+            if(card1.dataset.emoji === card2.dataset.emoji) {
+                // រកឃើញដូចគ្នា (Match!)
+                setTimeout(() => {
+                    card1.className = "aspect-square bg-emerald-500 rounded-2xl flex items-center justify-center text-4xl border-4 border-emerald-400 text-white";
+                    card2.className = "aspect-square bg-emerald-500 rounded-2xl flex items-center justify-center text-4xl border-4 border-emerald-400 text-white";
+                    matchedCount++;
+                    document.getElementById('memory-matches').innerText = matchedCount;
+                    flippedCards = [];
+                    canFlip = true;
+                }, 400);
+            } else {
+                // មិនដូចគ្នាទេ ត្រូវផ្កាប់វិញ
+                setTimeout(() => {
+                    card1.className = "aspect-square bg-indigo-500 rounded-2xl flex items-center justify-center text-4xl cursor-pointer border-4 border-indigo-400 text-transparent";
+                    card1.innerText = '❓';
+                    card2.className = "aspect-square bg-indigo-500 rounded-2xl flex items-center justify-center text-4xl cursor-pointer border-4 border-indigo-400 text-transparent";
+                    card2.innerText = '❓';
+                    flippedCards = [];
+                    canFlip = true;
+                }, 800);
+            }
+        }
+
+        // ចាប់ផ្តើមហ្គេមដំបូងគេពេលបើក Web
+        window.onload = () => {
+            initBalloonGame();
+        };
+    </script>
+</body>
+</html><meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Khmer Kid Arcade Portal</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;700&display=swap');
+        body { font-family: 'Kantumruy Pro', sans-serif; background: linear-gradient(135deg, #fef08a 0%, #fbcfe8 100%); min-height: 100vh; }
+        .hidden-game { display: none !important; }
+    </style>
+</head>
+<body class="p-4 flex flex-col items-center">
+
+    <header class="text-center my-4 w-full max-w-4xl">
+        <h1 class="text-4xl font-bold text-pink-600 drop-shadow-md mb-4 animate-bounce">🎈 ពិភពហ្គេមកុមារដ៏រីករាយ 🌟</h1>
+        
+        <div class="flex flex-wrap justify-center gap-3 bg-white/80 p-3 rounded-2xl shadow-lg border border-pink-200">
+            <button onclick="switchGame('balloon')" id="btn-balloon" class="bg-pink-500 hover:bg-pink-600 text-white font-bold px-6 py-2.5 rounded-xl transition-all shadow-md transform scale-105">
+                🎈 ចាក់ប៉េងប៉ោង
+            </button>
+            <button onclick="switchGame('fruit')" id="btn-fruit" class="bg-amber-400 hover:bg-amber-500 text-white font-bold px-6 py-2.5 rounded-xl transition-all shadow-md">
+                🍎 ត្រកងផ្លែឈើ
+            </button>
+            <button onclick="switchGame('memory')" id="btn-memory" class="bg-purple-500 hover:bg-purple-600 text-white font-bold px-6 py-2.5 rounded-xl transition-all shadow-md">
+                🐱 បើករូបផ្គូផ្គង
+            </button>
+        </div>
+    </header>
+
+    <main class="w-full max-w-3xl bg-slate-900 border-4 border-white rounded-3xl shadow-2xl relative overflow-hidden aspect-video min-h-[450px]">
+        
+        <div id="game-balloon" class="w-full h-full relative bg-gradient-to-b from-sky-300 to-sky-100 overflow-hidden select-none cursor-crosshair">
+            <div class="absolute top-4 left-4 bg-white/80 backdrop-blur text-slate-800 px-4 py-1.5 rounded-full font-bold text-lg shadow-sm z-10">
+                ពិន្ទុ៖ <span id="balloon-score">0</span>
+            </div>
+            <div id="balloon-area" class="w-full h-full relative"></div>
+        </div>
+
+        <div id="game-fruit" class="w-full h-full relative bg-gradient-to-b from-teal-400 to-emerald-200 overflow-hidden hidden-game select-none">
+            <div class="absolute top-4 left-4 flex gap-4 z-10">
+                <div class="bg-white/80 backdrop-blur text-slate-800 px-4 py-1.5 rounded-full font-bold text-lg shadow-sm">
+                    ពិន្ទុ៖ <span id="fruit-score">0</span>
+                </div>
+                <div class="bg-white/80 backdrop-blur text-red-600 px-4 py-1.5 rounded-full font-bold text-lg shadow-sm">
+                    ជីវិត៖ <span id="fruit-lives">3</span>
+                </div>
+            </div>
+            <canvas id="fruitCanvas" class="w-full h-full block"></canvas>
+            <div class="absolute bottom-4 left-0 right-0 flex justify-between px-8 md:hidden z-20">
+                <button ontouchstart="moveFruitBasket(-40)" ontouchend="moveFruitBasket(0)" class="bg-white/40 active:bg-white/80 text-white p-4 rounded-full text-2xl w-16 h-16 shadow-lg">⬅️</button>
+                <button ontouchstart="moveFruitBasket(40)" ontouchend="moveFruitBasket(0)" class="bg-white/40 active:bg-white/80 text-white p-4 rounded-full text-2xl w-16 h-16 shadow-lg">➡️</button>
+            </div>
+        </div>
+
+        <div id="game-memory" class="w-full h-full bg-gradient-to-b from-indigo-900 to-purple-800 p-6 flex flex-col items-center justify-center hidden-game select-none">
+            <div class="text-white font-bold text-xl mb-4">
+                គូដែលរកឃើញ៖ <span id="memory-matches">0</span> / 6
+            </div>
+            <div id="memory-grid" class="grid grid-cols-4 gap-3 max-w-md w-full"></div>
+            <button onclick="initMemoryGame()" class="mt-4 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-sm transition-all shadow-md">
+                🔄 លេងឡើងវិញ
+            </button>
+        </div>
+
+    </main>
+
+    <footer class="mt-6 text-slate-600 text-sm font-medium">
+        &copy; 2026 Khmer Kid Games Portal. រចនាឡើងយ៉ាងឡូយសម្រាប់កុមារ។
+    </footer>
+
+    <script>
+        let currentActiveGame = 'balloon';
+
+        // មុខងារដូរហ្គេមលេង
+        function switchGame(gameName) {
+            currentActiveGame = gameName;
+            
+            // លាក់រាល់ហ្គេមទាំងអស់សិន
+            document.getElementById('game-balloon').classList.add('hidden-game');
+            document.getElementById('game-fruit').classList.add('hidden-game');
+            document.getElementById('game-memory').classList.add('hidden-game');
+            
+            // ដក Style ប៊ូតុងទាំងអស់
+            document.getElementById('btn-balloon').className = "bg-pink-500 hover:bg-pink-600 text-white font-bold px-6 py-2.5 rounded-xl transition-all shadow-md";
+            document.getElementById('btn-fruit').className = "bg-amber-400 hover:bg-amber-500 text-white font-bold px-6 py-2.5 rounded-xl transition-all shadow-md";
+            document.getElementById('btn-memory').className = "bg-purple-500 hover:bg-purple-600 text-white font-bold px-6 py-2.5 rounded-xl transition-all shadow-md";
+
+            // បង្ហាញហ្គេមដែលបានជ្រើសរើស និងបន្ថែម Style ប៊ូតុងសកម្ម
+            if(gameName === 'balloon') {
+                document.getElementById('game-balloon').classList.remove('hidden-game');
+                document.getElementById('btn-balloon').classList.add('scale-105', 'ring-4', 'ring-pink-300');
+                initBalloonGame();
+            } else if(gameName === 'fruit') {
+                document.getElementById('game-fruit').classList.remove('hidden-game');
+                document.getElementById('btn-fruit').classList.add('scale-105', 'ring-4', 'ring-amber-200');
+                initFruitGame();
+            } else if(gameName === 'memory') {
+                document.getElementById('game-memory').classList.remove('hidden-game');
+                document.getElementById('btn-memory').classList.add('scale-105', 'ring-4', 'ring-purple-300');
+                initMemoryGame();
+            }
+        }
+
+        // ==================== ENGINE 1: BALLOON POPPER ====================
+        let balloonScore = 0;
+        let balloonInterval;
+        const colors = ['#ff4757', '#2ed573', '#1e90ff', '#ffa502', '#eccc68', '#9b59b6'];
+
+        function initBalloonGame() {
+            clearInterval(balloonInterval);
+            document.getElementById('balloon-area').innerHTML = '';
+            balloonScore = 0;
+            document.getElementById('balloon-score').innerText = balloonScore;
+            balloonInterval = setInterval(createBalloon, 800);
+        }
+
+        function createBalloon() {
+            if(currentActiveGame !== 'balloon') return;
+            const area = document.getElementById('balloon-area');
+            const balloon = document.createElement('div');
+            
+            const size = Math.random() * (70 - 50) + 50;
+            const randomX = Math.random() * (area.offsetWidth - size);
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            
+            balloon.style.position = 'absolute';
+            balloon.style.bottom = '-100px';
+            balloon.style.left = randomX + 'px';
+            balloon.style.width = size + 'px';
+            balloon.style.height = (size * 1.2) + 'px';
+            balloon.style.backgroundColor = color;
+            balloon.style.borderRadius = '50% 50% 50% 50% / 40% 40% 60% 60%';
+            balloon.style.boxShadow = 'inset -8px -8px 0px rgba(0,0,0,0.15), 0 10px 15px rgba(0,0,0,0.1)';
+            
+            // កន្ទុយប៉េងប៉ោង
+            const string = document.createElement('div');
+            string.style.width = '2px';
+            string.style.height = '40px';
+            string.style.backgroundColor = '#888';
+            string.style.position = 'absolute';
+            string.style.bottom = '-40px';
+            string.style.left = '50%';
+            balloon.appendChild(string);
+
+            // ព្រឹត្តិការណ៍ចាក់បែក (Pop)
+            const popAction = () => {
+                balloonScore++;
+                document.getElementById('balloon-score').innerText = balloonScore;
+                
+                // លេងចលនាបែកតូចមួយ
+                balloon.style.transform = 'scale(1.4)';
+                balloon.style.opacity = '0';
+                balloon.style.transition = 'all 0.1s ease-out';
+                setTimeout(() => balloon.remove(), 100);
+            };
+            balloon.addEventListener('mousedown', popAction);
+            balloon.addEventListener('touchstart', (e) => { e.preventDefault(); popAction(); });
+
+            area.appendChild(balloon);
+
+            // ចលនាហោះឡើងលើ
+            let currentY = -100;
+            const speed = Math.random() * (3 - 1.5) + 1.5;
+            
+            function fly() {
+                if(currentActiveGame !== 'balloon') { balloon.remove(); return; }
+                currentY += speed;
+                balloon.style.bottom = currentY + 'px';
+                
+                if(currentY > area.offsetHeight + 100) {
+                    balloon.remove();
+                } else {
+                    requestAnimationFrame(fly);
+                }
+            }
+            fly();
+        }
+
+
+        // ==================== ENGINE 2: FRUIT CATCHER ====================
+        const fCanvas = document.getElementById('fruitCanvas');
+        const fCtx = fCanvas.getContext('2d');
+        let fruitScore = 0;
+        let fruitLives = 3;
+        let basket = { x: 0, y: 0, w: 90, h: 25, speed: 0 };
+        let catchables = [];
+        let fruitGameActive = false;
+        let fruitItems = ['🍎', '🍌', '🍉', '🍊', '🍇'];
+
+        function initFruitGame() {
+            // កំណត់ទំហំ Canvas ឱ្យត្រូវនឹងផ្ទៃម៉ាស៊ីន
+            fCanvas.width = fCanvas.parentElement.offsetWidth;
+            fCanvas.height = fCanvas.parentElement.offsetHeight;
+            
+            fruitScore = 0;
+            fruitLives = 3;
+            fruitGameActive = true;
+            catchables = [];
+            
+            document.getElementById('fruit-score').innerText = fruitScore;
+            document.getElementById('fruit-lives').innerText = fruitLives;
+
+            basket.x = fCanvas.width / 2 - basket.w / 2;
+            basket.y = fCanvas.height - 45;
+
+            // ចាប់ហ្វ្រាំងបញ្ជាតាម Keyboard សម្រាប់កុំព្យូទ័រ
+            window.onkeydown = (e) => {
+                if(e.code === 'ArrowLeft') basket.speed = -8;
+                if(e.code === 'ArrowRight') basket.speed = 8;
+            };
+            window.onkeyup = (e) => {
+                if(e.code === 'ArrowLeft' || e.code === 'ArrowRight') basket.speed = 0;
+            };
+
+            // តាមដានចលនា Mouse លើ Canvas ឱ្យងាយស្រួលបញ្ជា
+            fCanvas.onmousemove = (e) => {
+                const rect = fCanvas.getBoundingClientRect();
+                basket.x = e.clientX - rect.left - basket.w / 2;
+            };
+
+            updateFruitGame();
+        }
+
+        function moveFruitBasket(speed) {
+            basket.speed = speed;
+        }
+
+        function updateFruitGame() {
+            if(currentActiveGame !== 'fruit' || !fruitGameActive) return;
+
+            fCtx.clearRect(0, 0, fCanvas.width, fCanvas.height);
+
+            // រំកិលធុងត្រកង
+            basket.x += basket.speed;
+            if(basket.x < 0) basket.x = 0;
+            if(basket.x > fCanvas.width - basket.w) basket.x = fCanvas.width - basket.w;
+
+            // គូសធុងត្រកង (Basket)
+            fCtx.fillStyle = '#0284c7';
+            fCtx.beginPath();
+            fCtx.roundRect(basket.x, basket.y, basket.w, basket.h, 10);
+            fCtx.fill();
+            fCtx.fillStyle = '#fff';
+            fCtx.font = '14px sans-serif';
+            fCtx.fillText('📥 ធុងខ្មែរ', basket.x + 15, basket.y + 18);
+
+            // បង្កើតផ្លែឈើ ឬគ្រាប់បែកចៃដន្យ
+            if(Math.random() < 0.02) {
+                let isBomb = Math.random() < 0.25; // 25% ជាគ្រាប់បែក
+                catchables.push({
+                    x: Math.random() * (fCanvas.width - 30),
+                    y: -30,
+                    type: isBomb ? '💣' : fruitItems[Math.floor(Math.random() * fruitItems.length)],
+                    isBomb: isBomb,
+                    speed: Math.random() * (4 - 2) + 2 + (fruitScore/50)
+                });
+            }
+
+            // គ្រប់គ្រងវត្ថុដែលធ្លាក់មក
+            for(let i = catchables.length - 1; i >= 0; i--) {
+                let item = catchables[i];
+                item.y += item.speed;
+
+                // គូសផ្លែឈើ/គ្រាប់បែក (Emoji)
+                fCtx.font = '30px sans-serif';
+                fCtx.fillText(item.type, item.x, item.y);
+
+                // បុកជាមួយធុងត្រកង
+                if(item.y + 15 >= basket.y && item.y <= basket.y + basket.h && item.x + 30 >= basket.x && item.x <= basket.x + basket.w) {
+                    if(item.isBomb) {
+                        fruitLives--;
+                        document.getElementById('fruit-lives').innerText = fruitLives;
+                        if(fruitLives <= 0) fruitGameActive = false;
+                    } else {
+                        fruitScore += 10;
+                        document.getElementById('fruit-score').innerText = fruitScore;
+                    }
+                    catchables.splice(i, 1);
+                    continue;
+                }
+
+                // ធ្លាក់ហួសដី
+                if(item.y > fCanvas.height) {
+                    if(!item.isBomb) {
+                        // បើធ្លាក់ផ្លែឈើចោល អត់យក អស់ជីវិត ១
+                        fruitLives--;
+                        document.getElementById('fruit-lives').innerText = fruitLives;
+                        if(fruitLives <= 0) fruitGameActive = false;
+                    }
+                    catchables.splice(i, 1);
+                }
+            }
+
+            // ប្រសិនបើ Game Over
+            if(!fruitGameActive) {
+                fCtx.fillStyle = 'rgba(0,0,0,0.75)';
+                fCtx.fillRect(0, 0, fCanvas.width, fCanvas.height);
+                fCtx.fillStyle = '#fff';
+                fCtx.font = 'bold 30px sans-serif';
+                fCtx.fillText('GAME OVER 😢', fCanvas.width/2 - 100, fCanvas.height/2 - 10);
+                fCtx.font = '18px sans-serif';
+                fCtx.fillText('ចុចលើប៊ូតុងខាងលើ ដើម្បីលេងម្តងទៀត', fCanvas.width/2 - 140, fCanvas.height/2 + 25);
+                return;
+            }
+
+            requestAnimationFrame(updateFruitGame);
+        }
+
+
+        // ==================== ENGINE 3: MEMORY MATCH ====================
+        const emojis = ['🐱', '🐶', '🦊', '🦁', '🐸', '🦄', '🐱', '🐶', '🦊', '🦁', '🐸', '🦄'];
+        let flippedCards = [];
+        let matchedCount = 0;
+        let canFlip = true;
+
+        function initMemoryGame() {
+            const grid = document.getElementById('memory-grid');
+            grid.innerHTML = '';
+            flippedCards = [];
+            matchedCount = 0;
+            canFlip = true;
+            document.getElementById('memory-matches').innerText = matchedCount;
+
+            // លាយឡំរូបភាពដោយចៃដន្យ (Shuffle)
+            const shuffled = emojis.sort(() => Math.random() - 0.5);
+
+            shuffled.forEach((emoji, index) => {
+                const card = document.createElement('div');
+                card.dataset.emoji = emoji;
+                card.dataset.index = index;
+                card.className = "aspect-square bg-indigo-500 rounded-2xl flex items-center justify-center text-4xl cursor-pointer border-4 border-indigo-400 shadow-md transform transition-all active:scale-95 text-transparent";
+                card.innerText = '❓';
+
+                const cardFlipAction = () => {
+                    if(!canFlip  flippedCards.includes(card)  card.classList.contains('bg-emerald-500')) return;
+
+                    // បើកកាត
+                    card.classList.remove('text-transparent', 'bg-indigo-500');
+                    card.classList.add('bg-white', 'text-slate-900');
+                    card.innerText = emoji;
+                    flippedCards.push(card);
+
+                    if(flippedCards.length === 2) {
+                        canFlip = false;
+                        checkMemoryMatch();
+                    }
+                };
+
+                card.addEventListener('click', cardFlipAction);
+                grid.appendChild(card);
+            });
+        }
+
+        function checkMemoryMatch() {
+            const [card1, card2] = flippedCards;
+
+            if(card1.dataset.emoji === card2.dataset.emoji) {
+                // រកឃើញដូចគ្នា (Match!)
+                setTimeout(() => {
+                    card1.className = "aspect-square bg-emerald-500 rounded-2xl flex items-center justify-center text-4xl border-4 border-emerald-400 text-white";
+                    card2.className = "aspect-square bg-emerald-500 rounded-2xl flex items-center justify-center text-4xl border-4 border-emerald-400 text-white";
+                    matchedCount++;
+                    document.getElementById('memory-matches').innerText = matchedCount;
+                    flippedCards = [];
+                    canFlip = true;
+                }, 400);
+            } else {
+                // មិនដូចគ្នាទេ ត្រូវផ្កាប់វិញ
+                setTimeout(() => {
+                    card1.className = "aspect-square bg-indigo-500 rounded-2xl flex items-center justify-center text-4xl cursor-pointer border-4 border-indigo-400 text-transparent";
+                    card1.innerText = '❓';
+                    card2.className = "aspect-square bg-indigo-500 rounded-2xl flex items-center justify-center text-4xl cursor-pointer border-4 border-indigo-400 text-transparent";
+                    card2.innerText = '❓';
+                    flippedCards = [];
+                    canFlip = true;
+                }, 800);
+            }
+        }
+
+        // ចាប់ផ្តើមហ្គេមដំបូងគេពេលបើក Web
+        window.onload = () => {
+            initBalloonGame();
+        };
+    </script>
+</body>
+</html><a href="https://agent-6a3c4bc7a3af79628ac--verdant-longma-4aacb6.netlify.app/" target="_blank">
+    <button style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 5px;">
+        បើកទៅកាន់ Agent 1
+    </button>
+</a>
+
+<a href="https://agent-6a3cac942730c7877--guileless-cajeta-a526af.netlify.app" target="_blank">
+    <button style="padding: 10px 20px; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 5px;">
+        បើកទៅកាន់ Agent 2
+    </button>
+</a>
